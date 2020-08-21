@@ -2,6 +2,7 @@
           package="stan.aac.experience">
 
     <application
+        android:theme="@style/Common.App.Theme"
         android:label="AACExperience"
         >
         <activity android:name=".MainActivity">

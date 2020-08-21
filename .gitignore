@@ -3,6 +3,7 @@
 !/buildSrc
 !.gitignore
 !build.gradle.kts
+!gradle.properties
 !LICENSE
 !README.md
 !settings.gradle.kts
