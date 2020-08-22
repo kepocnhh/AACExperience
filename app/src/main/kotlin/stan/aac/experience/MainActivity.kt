@@ -7,7 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
-import stan.aac.experience.implementation.util.platform.android.lifecycle.reactive.subscribe
+import stan.aac.experience.implementation.util.platform.android.lifecycle.reactive.subscribeAll
 import stan.aac.experience.implementation.util.platform.android.lifecycle.reactive.toAction
 import stan.aac.experience.presentation.module.fandom.search.FandomSearchFragment
 import stan.aac.experience.presentation.module.start.StartFragment
@@ -18,16 +18,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     init {
-        lifecycle.subscribe(StartFragment.subjectOutConsumer toAction {
-            when (it) {
-                is StartFragment.Broadcast.Out.Search -> {
-                    supportFragmentManager.beginTransaction().apply {
-                        replace(containerViewId, FandomSearchFragment())
-                        commitNow()
+        lifecycle.subscribeAll(
+            StartFragment.subjectOutConsumer toAction {
+                when (it) {
+                    is StartFragment.Broadcast.Out.Search -> {
+                        supportFragmentManager.beginTransaction().apply {
+                            replace(containerViewId, FandomSearchFragment())
+                            commitNow()
+                        }
+                    }
+                }
+            },
+            FandomSearchFragment.subjectOutConsumer toAction {
+                when (it) {
+                    is FandomSearchFragment.Broadcast.Out.Back -> {
+                        supportFragmentManager.beginTransaction().apply {
+                            replace(containerViewId, StartFragment())
+                            commitNow()
+                        }
                     }
                 }
             }
-        })
+        )
     }
 
 //    private val containerViewId = View.generateViewId() // todo
@@ -45,7 +57,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(contentView)
         if (savedInstanceState != null) return
         supportFragmentManager.beginTransaction().apply {
-//            replace(contentView.id, FandomSearchFragment())
             replace(containerViewId, StartFragment())
             commitNow()
         }

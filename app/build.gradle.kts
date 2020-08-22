@@ -40,5 +40,5 @@ dependencies {
 //    implementation("androidx.appcompat:appcompat:1.2.5")
     implementation("androidx.recyclerview:recyclerview:1.1.0")
 //    implementation("androidx.recyclerview:recyclerview:1.2.5")
-//    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.2.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.2.0")
 }

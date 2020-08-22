@@ -71,3 +71,27 @@ fun <T : Any> Lifecycle.subscribe(
 ) {
     subscribe(subjectPair.consumer, subjectPair.action)
 }
+
+fun Lifecycle.subscribeAll(
+    subjectPairFirst: SubjectPair<*>,
+    subjectPairSecond: SubjectPair<*>,
+    vararg subjectPairs: SubjectPair<*>
+) {
+    addObserver(
+        SubscriptionLifecycleObserver(this) {
+            subjectPairFirst as SubjectPair<Any>
+            subjectPairSecond as SubjectPair<Any>
+            val result = mutableListOf(
+                subjectPairFirst.consumer.subscribe(subjectPairFirst.action),
+                subjectPairSecond.consumer.subscribe(subjectPairSecond.action)
+            )
+            result.addAll(
+                subjectPairs.map {
+                    it as SubjectPair<Any>
+                    it.consumer.subscribe(it.action)
+                }
+            )
+            result
+        }
+    )
+}

@@ -12,6 +12,8 @@ inline fun <reified T : ViewModel> viewModel(
     return ViewModelProvider(viewModelStore, viewModelProviderFactory).get(T::class.java)
 }
 
-inline fun <reified T : ViewModel> Fragment.viewModel(): T {
-    return viewModel(viewModelStore, defaultViewModelProviderFactory)
+inline fun <reified T : ViewModel> Fragment.viewModel(
+    viewModelProviderFactory: ViewModelProvider.Factory = defaultViewModelProviderFactory
+): T {
+    return viewModel(viewModelStore, viewModelProviderFactory)
 }
