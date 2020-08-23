@@ -1,6 +1,7 @@
 object Version {
     const val kotlin = "1.3.72"
 //    const val kotlinDsl = "1.3.6" // todo
+    const val okhttp = "3.12.12" // https://developer.squareup.com/blog/okhttp-3-13-requires-android-5/
 
     object Android {
         const val toolsBuildGradle = "4.0.1"

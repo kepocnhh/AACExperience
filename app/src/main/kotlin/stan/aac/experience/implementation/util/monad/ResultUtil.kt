@@ -1,11 +1,10 @@
 package stan.aac.experience.implementation.util.monad
 
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.withContext
 import stan.aac.experience.foundation.util.monad.Result
 import kotlin.coroutines.CoroutineContext
 
-fun <T : Any> tryWithResult(block: () -> T): Result<T> {
+fun <T : Any> runCatching(block: () -> T): Result<T> {
     val result = try {
         block()
     } catch (error: Throwable) {
@@ -14,9 +13,9 @@ fun <T : Any> tryWithResult(block: () -> T): Result<T> {
     return Result.Success(result)
 }
 
-suspend fun <T : Any> tryWithResult(
+suspend fun <T : Any> runCatching(
     context: CoroutineContext,
     block: () -> T
 ): Result<T> = withContext(context) {
-    tryWithResult(block)
+    runCatching(block)
 }

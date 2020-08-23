@@ -26,6 +26,11 @@ data class Dependency(
             name = "kotlin-stdlib",
             version = Version.kotlin
         )
+        val okhttp = Dependency(
+            group = "com.squareup.okhttp3",
+            name = "okhttp",
+            version = Version.okhttp
+        )
     }
 }
 
