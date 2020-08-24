@@ -18,14 +18,14 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import stan.aac.experience.App
 import stan.aac.experience.foundation.entity.Fandom
 import stan.aac.experience.implementation.module.fandom.search.FandomSearchViewModel
-import stan.aac.experience.implementation.util.platform.android.lifecycle.coroutines.isBusy
+import stan.aac.experience.implementation.util.platform.android.lifecycle.coroutines.isBusyConsumer
 import stan.aac.experience.implementation.util.platform.android.lifecycle.reactive.subscribe
+import stan.aac.experience.implementation.util.platform.android.lifecycle.reactive.subscribeAll
 import stan.aac.experience.implementation.util.platform.android.lifecycle.reactive.toAction
 import stan.aac.experience.implementation.util.platform.android.lifecycle.viewModel
 import stan.aac.experience.implementation.util.reactive.subject.Subject
@@ -94,7 +94,6 @@ class FandomSearchFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-//            background = ColorDrawable(Color.GREEN)
             setTextColor(Color.WHITE)
         }
         this.editText = editText
@@ -105,7 +104,6 @@ class FandomSearchFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
             layoutManager = LinearLayoutManager(context)
-//            background = ColorDrawable(Color.RED)
         }
         this.recyclerView = recyclerView
         result.addView(recyclerView)
@@ -165,11 +163,10 @@ class FandomSearchFragment : Fragment() {
             }
         }
         recyclerView.adapter = adapter
-//        adapter.notifyDataSetChanged()
         val viewModel = viewModel<FandomSearchViewModel>(App.viewModelFactory)
-        lifecycle.subscribe(viewModel.subjectOutConsumer) {
+        lifecycle.subscribe(viewModel.broadcastConsumer) {
             when (it) {
-                is FandomSearchViewModel.Broadcast.Out.Error -> {
+                is FandomSearchViewModel.Broadcast.Error -> {
                     Toast.makeText(context, "Error!", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -184,18 +181,28 @@ class FandomSearchFragment : Fragment() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
             }
         }
-        viewModel.fandoms.observe(viewLifecycleOwner, Observer {
-            data = it.orEmpty()
-            adapter.notifyDataSetChanged()
-        })
-        viewModel.isBusy().observe(viewLifecycleOwner, Observer {
-            if (it == true && progressView.visibility != View.VISIBLE) {
-                progressView.visibility = View.VISIBLE
-            } else if (it != true && progressView.visibility != View.INVISIBLE) {
-                progressView.visibility = View.INVISIBLE
+        viewLifecycleOwner.lifecycle.subscribeAll(
+            viewModel.dataConsumer toAction {
+                when (it) {
+                    is FandomSearchViewModel.Data.Fandoms -> {
+                        data = it.list
+                        adapter.notifyDataSetChanged()
+                    }
+                }
+            },
+            viewModel.isBusyConsumer() toAction {
+                if (it.isBusy && progressView.visibility != View.VISIBLE) {
+                    progressView.visibility = View.VISIBLE
+                } else if (!it.isBusy && progressView.visibility != View.INVISIBLE) {
+                    progressView.visibility = View.INVISIBLE
+                }
             }
-        })
-        if (savedInstanceState != null) {
+        )
+        if (savedInstanceState == null) {
+            progressView.visibility = View.INVISIBLE
+            editText.addTextChangedListener(textWatcher)
+            viewModel.requestFandoms(null)
+        } else {
             val searchQuery = savedInstanceState.getString("searchQuery")
             if (searchQuery.isNullOrEmpty()) {
                 // todo
@@ -203,9 +210,6 @@ class FandomSearchFragment : Fragment() {
                 editText.setText(searchQuery)
             }
             editText.addTextChangedListener(textWatcher)
-        } else {
-            editText.addTextChangedListener(textWatcher)
-            viewModel.requestFandoms(null)
         }
     }
 }

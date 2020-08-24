@@ -1,26 +1,39 @@
 package stan.aac.experience.implementation.util.platform.android.lifecycle.coroutines
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import stan.aac.experience.implementation.util.reactive.subject.BehaviorSubject
+import stan.aac.experience.implementation.util.reactive.subject.SubjectConsumer
 import kotlin.reflect.KClass
 
-private val isBusyMap = mutableMapOf<KClass<out ViewModel>, MutableLiveData<Boolean>>()
-
-private fun ViewModel.isBusyMutable(): MutableLiveData<Boolean> {
-    return isBusyMap[this::class]
-        ?: MutableLiveData<Boolean>().also {
-            isBusyMap[this::class] = it
-        }
+sealed class ViewModelCommon {
+    class State(val isBusy: Boolean) : ViewModelCommon()
 }
 
-fun ViewModel.isBusy(): LiveData<Boolean> {
-    return isBusyMutable()
+private class CompositeSubject<T : Any>(
+    val signing: Int,
+    val subject: BehaviorSubject<T>
+)
+
+private val isBusyMap = mutableMapOf<KClass<out ViewModel>, CompositeSubject<ViewModelCommon.State>>()
+
+private fun ViewModel.isBusySubject(): BehaviorSubject<ViewModelCommon.State> {
+    val compositeSubject = isBusyMap[this::class]
+    val signing = hashCode()
+    if (compositeSubject == null || compositeSubject.signing != signing) {
+        val result = BehaviorSubject<ViewModelCommon.State>()
+        isBusyMap[this::class] = CompositeSubject(signing = signing, subject = result)
+        return result
+    }
+    return compositeSubject.subject
+}
+
+fun ViewModel.isBusyConsumer(): SubjectConsumer<ViewModelCommon.State> {
+    return isBusySubject()
 }
 
 private val jobs = mutableMapOf<Any, Job>()
@@ -28,16 +41,18 @@ private val jobs = mutableMapOf<Any, Job>()
 private object CancellationExceptionInternal : CancellationException()
 
 private fun ViewModel.onStartJob() {
-    val isBusy = isBusyMutable()
-    if (isBusy.value != true) {
-        isBusy.value = true
+    val subject = isBusySubject()
+    val oldValue = subject.getValueOrNull()
+    if (oldValue == null || !oldValue.isBusy) {
+        subject next ViewModelCommon.State(isBusy = true)
     }
 }
 
 private fun ViewModel.onFinishJob() {
-    val isBusy = isBusyMutable()
-    if (isBusy.value == true) {
-        isBusy.value = false
+    val subject = isBusySubject()
+    val oldValue = subject.getValueOrNull()
+    if (oldValue != null && oldValue.isBusy) {
+        subject next ViewModelCommon.State(isBusy = false)
     }
 }
 
