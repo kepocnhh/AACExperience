@@ -48,6 +48,13 @@ fun <T : Any> Lifecycle.subscribe(
     )
 }
 
+fun <T : Any> Lifecycle.subscribe(
+    consumer: SubjectConsumer<T>,
+    actionOnNext: (T) -> Unit
+) {
+    subscribe(consumer, subjectAction(actionOnNext))
+}
+
 interface SubjectPair<T : Any> {
     val consumer: SubjectConsumer<T>
     val action: SubjectAction<T>

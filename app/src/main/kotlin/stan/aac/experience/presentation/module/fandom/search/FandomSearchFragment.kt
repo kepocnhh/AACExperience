@@ -14,7 +14,9 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -22,6 +24,9 @@ import androidx.recyclerview.widget.RecyclerView
 import stan.aac.experience.App
 import stan.aac.experience.foundation.entity.Fandom
 import stan.aac.experience.implementation.module.fandom.search.FandomSearchViewModel
+import stan.aac.experience.implementation.util.platform.android.lifecycle.coroutines.isBusy
+import stan.aac.experience.implementation.util.platform.android.lifecycle.reactive.subscribe
+import stan.aac.experience.implementation.util.platform.android.lifecycle.reactive.toAction
 import stan.aac.experience.implementation.util.platform.android.lifecycle.viewModel
 import stan.aac.experience.implementation.util.reactive.subject.Subject
 import stan.aac.experience.implementation.util.reactive.subject.SubjectConsumer
@@ -45,6 +50,7 @@ class FandomSearchFragment : Fragment() {
 
     private var recyclerView: RecyclerView? = null
     private var editText: EditText? = null
+    private var progressView: View? = null
 
     private fun onCreateView(context: Context): View {
         val result = LinearLayout(context).apply {
@@ -66,7 +72,23 @@ class FandomSearchFragment : Fragment() {
         buttonBack.setOnClickListener {
             subjectOut next Broadcast.Out.Back
         }
-        result.addView(buttonBack)
+        val progressView = ProgressBar(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+        this.progressView = progressView
+        val toolbar: ViewGroup = LinearLayout(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            orientation = LinearLayout.HORIZONTAL
+        }
+        toolbar.addView(buttonBack)
+        toolbar.addView(progressView)
+        result.addView(toolbar)
         val editText = EditText(context).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -104,7 +126,7 @@ class FandomSearchFragment : Fragment() {
         val context = requireNotNull(context)
         val recyclerView = requireNotNull(recyclerView)
         val editText = requireNotNull(editText)
-//        val data = (1..10).map { 2.0.pow(it).toInt() }
+        val progressView = requireNotNull(progressView)
         var data: List<Fandom> = emptyList()
         class ViewHolder : RecyclerView.ViewHolder(FrameLayout(context)) {
             val textView: TextView = TextView(context).apply {
@@ -145,6 +167,13 @@ class FandomSearchFragment : Fragment() {
         recyclerView.adapter = adapter
 //        adapter.notifyDataSetChanged()
         val viewModel = viewModel<FandomSearchViewModel>(App.viewModelFactory)
+        lifecycle.subscribe(viewModel.subjectOutConsumer) {
+            when (it) {
+                is FandomSearchViewModel.Broadcast.Out.Error -> {
+                    Toast.makeText(context, "Error!", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
         val textWatcher = object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 val text = editText.text.toString()
@@ -155,11 +184,17 @@ class FandomSearchFragment : Fragment() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
             }
         }
-        val observer = Observer<List<Fandom>> {
+        viewModel.fandoms.observe(viewLifecycleOwner, Observer {
             data = it.orEmpty()
             adapter.notifyDataSetChanged()
-        }
-        viewModel.fandoms.observe(viewLifecycleOwner, observer)
+        })
+        viewModel.isBusy().observe(viewLifecycleOwner, Observer {
+            if (it == true && progressView.visibility != View.VISIBLE) {
+                progressView.visibility = View.VISIBLE
+            } else if (it != true && progressView.visibility != View.INVISIBLE) {
+                progressView.visibility = View.INVISIBLE
+            }
+        })
         if (savedInstanceState != null) {
             val searchQuery = savedInstanceState.getString("searchQuery")
             if (searchQuery.isNullOrEmpty()) {
